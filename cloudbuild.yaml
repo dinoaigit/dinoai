@@ -8,6 +8,5 @@ steps:
     gcloud app deploy app.yaml --quiet
 logsBucket: gs://dinoai-app-bucket
 options:
-  logging: CLOUD_LOGGING_ONLY
   machineType: 'E2_HIGHCPU_8'
 timeout: '1200s'
