@@ -1,11 +1,8 @@
 steps:
-- name: 'gcr.io/cloud-builders/docker'
-  entrypoint: bash
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'bash'
   args:
-  - -c
+  - '-c'
   - |
-    python --version
-    pip install -r requirements.txt
-    python setup.py install
-images:
-- 'gcr.io/dinoai-430611/my-app'
+    gcloud config set project dinoai-430611
+    gcloud app deploy app.yaml --quiet
