@@ -1,7 +1,5 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'gcr.io/dinoai-430611/my-app', '.']
-- name: 'python:3.10.8'
   entrypoint: bash
   args:
   - -c
