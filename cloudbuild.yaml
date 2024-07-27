@@ -1,0 +1,13 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/my-app', '.']
+- name: 'python:3.10.8'
+  entrypoint: bash
+  args:
+  - -c
+  - |
+    python --version
+    pip install -r requirements.txt
+    python setup.py install
+images:
+- 'gcr.io/$PROJECT_ID/my-app'
