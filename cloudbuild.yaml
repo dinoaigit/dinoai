@@ -6,4 +6,4 @@ steps:
   - |
     gcloud config set project dinoai-430611
     gcloud app deploy app.yaml --quiet
-logsBucket: gs://my-build-logs-bucket
+logsBucket: gs://dinoaibucket
