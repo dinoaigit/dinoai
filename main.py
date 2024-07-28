@@ -1,27 +1,26 @@
-from folder_structure import create_folder_structure
-from google_drive import authenticate_google_drive, upload_folder_to_drive
-import schedule
-import time
+from scheduler import run_scheduler
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import smtplib
 
+def send_email(subject, body, to_email):
+    from_email = "fatih@dinoai.org"
+    from_password = "FaSe_310794"
+    to_email = "fatih@dinoai.org"
 
-def job():
-    # Klasör yapısını oluştur
-    create_folder_structure()
+    msg = MIMEMultipart()
+    msg['From'] = from_email
+    msg['To'] = to_email
+    msg['Subject'] = subject
 
-    # Google Drive'a bağlan
-    service = authenticate_google_drive()
+    msg.attach(MIMEText(body, 'plain'))
 
-    # Yerel klasör yolunu belirtin
-    local_folder_path = 'path/to/your/local/folder'
-
-    # Google Drive'a yükle
-    upload_folder_to_drive(service, local_folder_path)
-
-
-# Her 5 dakikada bir `job` fonksiyonunu çalıştır
-schedule.every(5).minutes.do(job)
+    server = smtplib.SMTP('smtp.example.com', 587)
+    server.starttls()
+    server.login(from_email, from_password)
+    text = msg.as_string()
+    server.sendmail(from_email, to_email, text)
+    server.quit()
 
 if __name__ == "__main__":
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    run_scheduler()

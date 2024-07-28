@@ -4,138 +4,87 @@ from timestamp_handler import load_timestamps, should_update, update_timestamp
 API_KEY = 'wH6iPDs7cs8qJfQBs7pqxXe_g6Afg-3i8SsKQ2rzW80'
 timestamps = load_timestamps()
 
+BASE_URL = 'https://trefle.io/api/v1/plants/{}?token={}';
+GENUS_URL = 'https://trefle.io/api/v1/genus/{}?token={}';
+FAMILY_URL = 'https://trefle.io/api/v1/families/{}?token={}';
 
-def get_kingdoms():
+def fetch_data(url):
     try:
-        if should_update(timestamps, "kingdoms"):
-            url = f'https://trefle.io/api/v1/kingdoms?token={API_KEY}'
-            response = requests.get(url)
-            response.raise_for_status()  # HTTPError durumunda istisna fırlatır
-            update_timestamp(timestamps, "kingdoms")
-            data = response.json()['data']
-            print("Kingdoms:", data)
-            return data
-        else:
-            return []
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        return data.get('data')
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching kingdoms: {e}")
-        return []
+        print("Error fetching data from url '{}': {}".format(url, e))
+        return None
 
+def get_plant_info(plant_id):
+    url = BASE_URL.format(plant_id, API_KEY)
+    return fetch_data(url)
 
-def get_subkingdoms(kingdom_id):
-    try:
-        if should_update(timestamps, "subkingdoms", kingdom_id):
-            url = f'https://trefle.io/api/v1/kingdoms/{kingdom_id}/subkingdoms?token={API_KEY}'
-            response = requests.get(url)
-            response.raise_for_status()
-            update_timestamp(timestamps, "subkingdoms", kingdom_id)
-            data = response.json()['data']
-            print(f"Subkingdoms for kingdom_id {kingdom_id}:", data)
-            return data
-        else:
-            return []
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching subkingdoms for kingdom_id {kingdom_id}: {e}")
-        return []
+def fetch_species_taxonomy(starting_id):
+    plant_info = get_plant_info(starting_id)
+    if not plant_info:
+        return
 
+    current_info = get_plant_info(starting_id)
+    genus_id = current_info.get('genus_id')
 
-def get_divisions(subkingdom_id):
-    try:
-        if should_update(timestamps, "divisions", subkingdom_id):
-            url = f'https://trefle.io/api/v1/subkingdoms/{subkingdom_id}/divisions?token={API_KEY}'
-            response = requests.get(url)
-            response.raise_for_status()
-            update_timestamp(timestamps, "divisions", subkingdom_id)
-            data = response.json()['data']
-            print(f"Divisions for subkingdom_id {subkingdom_id}:", data)
-            return data
-        else:
-            return []
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching divisions for subkingdom_id {subkingdom_id}: {e}")
-        return []
+    species_name = current_info.get('scientific_name')
+    species_id = current_info.get('id')
+    image_url = current_info.get('image_url', 'No image available')
+    observations = current_info.get('observations', 'No observations available')
+    species_taxonomy = {
+        "species_id": species_id,
+        "genus_id": genus_id,
+        "family_id": None,
+        "division_order_id": None,
+        "division_class_id": None,
+        "division_id": None,
+        "subkingdom_id": None,
+        "kingdom_id": None,
+        "species": species_name,
+        "genus": None,
+        "family": None,
+        "division_order": None,
+        "division_class": None,
+        "division": None,
+        "subkingdom": None,
+        "kingdom": None,
+        "image_url": image_url,
+        "observations": observations
+    }
 
+    def fetch_and_add_taxonomy(endpoint_id, url_template, level_name, taxonomy_dict):
+        if endpoint_id:
+            url = url_template.format(endpoint_id, API_KEY)
+            info = fetch_data(url)
+            if info:
+                taxonomy_dict[level_name + "_id"] = info.get('id')
+                taxonomy_dict[level_name] = info.get('name', 'Unknown')
+                return info
+        return None
 
-def get_classes(division_id):
-    try:
-        if should_update(timestamps, "classes", division_id):
-            url = f'https://trefle.io/api/v1/divisions/{division_id}/classes?token={API_KEY}'
-            response = requests.get(url)
-            response.raise_for_status()
-            update_timestamp(timestamps, "classes", division_id)
-            data = response.json()['data']
-            print(f"Classes for division_id {division_id}:", data)
-            return data
-        else:
-            return []
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching classes for division_id {division_id}: {e}")
-        return []
+    genus_info = fetch_and_add_taxonomy(genus_id, GENUS_URL, 'genus', species_taxonomy)
+    if not genus_info:
+        return species_taxonomy
 
+    family_id = genus_info.get('family', {}).get('id')
+    family_info = fetch_and_add_taxonomy(family_id, FAMILY_URL, 'family', species_taxonomy)
+    if not family_info:
+        return species_taxonomy
 
-def get_orders(class_id):
-    try:
-        if should_update(timestamps, "orders", class_id):
-            url = f'https://trefle.io/api/v1/classes/{class_id}/orders?token={API_KEY}'
-            response = requests.get(url)
-            response.raise_for_status()
-            update_timestamp(timestamps, "orders", class_id)
-            data = response.json()['data']
-            print(f"Orders for class_id {class_id}:", data)
-            return data
-        else:
-            return []
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching orders for class_id {class_id}: {e}")
-        return []
+    species_taxonomy.update({
+        "division_order_id": family_info.get('division_order', {}).get('id'),
+        "division_class_id": family_info.get('division_order', {}).get('division_class', {}).get('id'),
+        "division_id": family_info.get('division_order', {}).get('division_class', {}).get('division', {}).get('id'),
+        "subkingdom_id": family_info.get('division_order', {}).get('division_class', {}).get('division', {}).get('subkingdom', {}).get('id'),
+        "kingdom_id": family_info.get('division_order', {}).get('division_class', {}).get('division', {}).get('subkingdom', {}).get('kingdom', {}).get('id'),
+        "division_order": family_info.get('division_order', {}).get('name', 'Unknown'),
+        "division_class": family_info.get('division_order', {}).get('division_class', {}).get('name', 'Unknown'),
+        "division": family_info.get('division_order', {}).get('division_class', {}).get('division', {}).get('name', 'Unknown'),
+        "subkingdom": family_info.get('division_order', {}).get('division_class', {}).get('division', {}).get('subkingdom', {}).get('name', 'Unknown'),
+        "kingdom": family_info.get('division_order', {}).get('division_class', {}).get('division', {}).get('subkingdom', {}).get('kingdom', {}).get('name', 'Unknown')
+    })
 
-
-def get_families(order_id):
-    try:
-        if should_update(timestamps, "families", order_id):
-            url = f'https://trefle.io/api/v1/orders/{order_id}/families?token={API_KEY}'
-            response = requests.get(url)
-            response.raise_for_status()
-            update_timestamp(timestamps, "families", order_id)
-            data = response.json()['data']
-            print(f"Families for order_id {order_id}:", data)
-            return data
-        else:
-            return []
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching families for order_id {order_id}: {e}")
-        return []
-
-
-def get_genuses(family_id):
-    try:
-        if should_update(timestamps, "genuses", family_id):
-            url = f'https://trefle.io/api/v1/families/{family_id}/genuses?token={API_KEY}'
-            response = requests.get(url)
-            response.raise_for_status()
-            update_timestamp(timestamps, "genuses", family_id)
-            data = response.json()['data']
-            print(f"Genuses for family_id {family_id}:", data)
-            return data
-        else:
-            return []
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching genuses for family_id {family_id}: {e}")
-        return []
-
-
-def get_species(genus_id):
-    try:
-        if should_update(timestamps, "species", genus_id):
-            url = f'https://trefle.io/api/v1/genuses/{genus_id}/species?token={API_KEY}'
-            response = requests.get(url)
-            response.raise_for_status()
-            update_timestamp(timestamps, "species", genus_id)
-            data = response.json()['data']
-            print(f"Species for genus_id {genus_id}:", data)
-            return data
-        else:
-            return []
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching species for genus_id {genus_id}: {e}")
-        return []
+    return species_taxonomy
