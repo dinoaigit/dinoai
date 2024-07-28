@@ -1,0 +1,31 @@
+name: Run main.py every 5 seconds
+
+on:
+  schedule:
+    - cron: "* * * * *"  # Bu, işin her dakika çalışmasını sağlar.
+
+jobs:
+  run-main:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run main.py in a loop
+      run: |
+        for i in {1..12}
+        do
+          python main.py
+          sleep 5
+        done
