@@ -1,9 +1,8 @@
-import time
 import sqlite3
-from datetime import datetime, timedelta
 from database_integration import connect_db, process_plant_id
 
 STATE_FILE = 'state.txt'
+ERROR_FILE = 'errors.txt'
 
 def load_state():
     try:
@@ -16,31 +15,40 @@ def save_state(plant_id):
     with open(STATE_FILE, 'w') as file:
         file.write(str(plant_id))
 
+def load_errors():
+    try:
+        with open(ERROR_FILE, 'r') as file:
+            return [int(line.strip()) for line in file.readlines()]
+    except FileNotFoundError:
+        return []
+
+def save_error(plant_id):
+    with open(ERROR_FILE, 'a') as file:
+        file.write(f"{plant_id}\n")
+
+def remove_error(plant_id):
+    errors = load_errors()
+    if plant_id in errors:
+        errors.remove(plant_id)
+        with open(ERROR_FILE, 'w') as file:
+            for error in errors:
+                file.write(f"{error}\n")
+
 def run_scheduler():
     conn, c = connect_db()
     plant_id = load_state()
 
-    while plant_id <= 100000:
-        c.execute('''SELECT timestamp FROM log WHERE plant_id = ? AND reason = ? ORDER BY timestamp DESC LIMIT 1''',
-                  (plant_id, "Veri çekme başarısız"))
-        result = c.fetchone()
-        if result and datetime.now() - datetime.fromisoformat(result[0]) < timedelta(days=365):
-            print(f"{plant_id} ID'si için veri çekme hatası alınmış ve 1 yıl dolmamış.")
-            plant_id += 1
-            save_state(plant_id)
-            continue
+    success = process_plant_id(c, plant_id)
+    if not success:
+        save_error(plant_id)
 
-        success = process_plant_id(c, plant_id)
-        if not success:
-            plant_id += 1
-            save_state(plant_id)
-        else:
-            plant_id += 1
-            save_state(plant_id)
+    plant_id += 1
+    if plant_id > 100000:
+        plant_id = 1
 
-        conn.commit()
-        time.sleep(60)
+    save_state(plant_id)
 
+    conn.commit()
     conn.close()
 
 if __name__ == "__main__":
