@@ -3,7 +3,8 @@ from datetime import datetime
 from trefle_api import fetch_species_taxonomy
 
 def connect_db():
-    conn = sqlite3.connect('plants.db')
+    # SQLite veritabanı dosyanızın VM'deki yolunu belirtin
+    conn = sqlite3.connect('/home/fatih/database/plant.db')
     c = conn.cursor()
     return conn, c
 
