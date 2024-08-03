@@ -1,55 +1,80 @@
 from db_write import connect_to_db, process_plant_id
+from datetime import datetime, timedelta
 
-STATE_FILE = 'state.txt'
-ERROR_FILE = 'errors.txt'
-
-def load_state():
+def get_max_species_id(c):
     try:
-        with open(STATE_FILE, 'r') as file:
-            content = file.read().strip()
-            return int(content) if content else 1
-    except FileNotFoundError:
+        c.execute("SELECT MAX(species_id) FROM plant_taxonomy")
+        result = c.fetchone()
+        return result[0] if result[0] is not None else 1
+    except Exception as e:
+        print(f"Error loading max species_id: {e}")
         return 1
 
-def save_state(plant_id):
-    with open(STATE_FILE, 'w') as file:
-        file.write(str(plant_id))
+def check_log_for_species_id(c, species_id):
+    c.execute("SELECT COUNT(*) FROM log WHERE plant_id = ?", (species_id,))
+    result = c.fetchone()
+    return result[0] > 0
 
-def load_errors():
+def find_next_available_species_id(c):
+    species_id = get_max_species_id(c) + 1
+
+    while check_log_for_species_id(c, species_id):
+        species_id += 1
+
+    return species_id
+
+def save_error(c, plant_id):
     try:
-        with open(ERROR_FILE, 'r') as file:
-            errors = [line.strip() for line in file.readlines() if line.strip()]
-            return [int(line) for line in errors]
-    except FileNotFoundError:
-        return []
+        c.execute("INSERT INTO log (plant_id, table_name, reason, timestamp) VALUES (?, ?, ?, GETDATE())",
+                  (plant_id, 'N/A', 'Data fetch failed'))
+        c.commit()
+    except Exception as e:
+        print(f"Error saving error: {e}")
 
-def save_error(plant_id):
-    with open(ERROR_FILE, 'a') as file:
-        file.write(f"{plant_id}\n")
+def remove_error(c, plant_id):
+    try:
+        c.execute("DELETE FROM log WHERE plant_id = ? AND reason = 'Data fetch failed'", (plant_id,))
+        c.commit()
+    except Exception as e:
+        print(f"Error removing error: {e}")
 
-def remove_error(plant_id):
-    errors = load_errors()
-    if plant_id in errors:
-        errors.remove(plant_id)
-        with open(ERROR_FILE, 'w') as file:
-            for error in errors:
-                file.write(f"{error}\n")
+def reprocess_log_errors(c):
+    try:
+        c.execute("SELECT plant_id FROM log WHERE reason = 'Data fetch failed'")
+        error_ids = [row[0] for row in c.fetchall()]
+
+        for plant_id in error_ids:
+            try:
+                process_plant_id(plant_id)
+                remove_error(c, plant_id)
+                print(f"Successfully reprocessed plant_id {plant_id}")
+            except Exception as e:
+                print(f"Error reprocessing plant_id {plant_id}: {e}")
+
+    except Exception as e:
+        print(f"Error fetching log errors: {e}")
 
 def run_scheduler():
-    plant_id = load_state()
+    conn = connect_to_db()
+    if conn:
+        c = conn.cursor()
 
-    try:
-        process_plant_id(plant_id)
-        remove_error(plant_id)
-    except Exception as e:
-        print(f"Error processing plant_id {plant_id}: {e}")
-        save_error(plant_id)
+        while True:
+            species_id = find_next_available_species_id(c)
 
-    plant_id += 1
-    if plant_id > 100000:
-        plant_id = 1
+            if species_id > 450000:
+                print("Reached plant_id 450000, switching to reprocess log errors.")
+                reprocess_log_errors(c)
+                break
 
-    save_state(plant_id)
+            try:
+                process_plant_id(species_id)
+            except Exception as e:
+                print(f"Error processing species_id {species_id}: {e}")
+                save_error(c, species_id)
+
+        c.close()
+        conn.close()
 
 if __name__ == "__main__":
     run_scheduler()
