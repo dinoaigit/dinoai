@@ -1,8 +1,9 @@
+
 name: Run Python Script Every Minute
 
 on:
   schedule:
-    - cron: '*/1 * * * *'  # Bu cron ifadesi scripti her dakika çalýþtýrýr
+    - cron: '*/1 * * * *'  # Bu cron ifadesi scripti her dakika Ã§alÃ½Ã¾tÃ½rÃ½r
 
 jobs:
   run-script:
