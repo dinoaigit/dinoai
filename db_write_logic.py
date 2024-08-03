@@ -1,5 +1,5 @@
 import sqlite3
-from database_integration import connect_db, process_plant_id
+from db_write import connect_db, process_plant_id
 
 STATE_FILE = 'state.txt'
 ERROR_FILE = 'errors.txt'
