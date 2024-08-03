@@ -79,8 +79,3 @@ def process_plant_id(plant_id):
         finally:
             c.close()
             conn.close()
-
-# Örnek kullanım
-if __name__ == "__main__":
-    plant_id = '1'  # Örnek bitki ID'si, bunu gerçek bir ID ile değiştirin
-    process_plant_id(plant_id)

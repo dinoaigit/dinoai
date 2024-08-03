@@ -1,5 +1,4 @@
-import sqlite3
-from db_write import connect_db, process_plant_id
+from db_write import connect_to_db, process_plant_id
 
 STATE_FILE = 'state.txt'
 ERROR_FILE = 'errors.txt'
@@ -7,7 +6,8 @@ ERROR_FILE = 'errors.txt'
 def load_state():
     try:
         with open(STATE_FILE, 'r') as file:
-            return int(file.read().strip())
+            content = file.read().strip()
+            return int(content) if content else 1
     except FileNotFoundError:
         return 1
 
@@ -18,7 +18,8 @@ def save_state(plant_id):
 def load_errors():
     try:
         with open(ERROR_FILE, 'r') as file:
-            return [int(line.strip()) for line in file.readlines()]
+            errors = [line.strip() for line in file.readlines() if line.strip()]
+            return [int(line) for line in errors]
     except FileNotFoundError:
         return []
 
@@ -35,11 +36,13 @@ def remove_error(plant_id):
                 file.write(f"{error}\n")
 
 def run_scheduler():
-    conn, c = connect_db()
     plant_id = load_state()
 
-    success = process_plant_id(c, plant_id)
-    if not success:
+    try:
+        process_plant_id(plant_id)
+        remove_error(plant_id)
+    except Exception as e:
+        print(f"Error processing plant_id {plant_id}: {e}")
         save_error(plant_id)
 
     plant_id += 1
@@ -47,9 +50,6 @@ def run_scheduler():
         plant_id = 1
 
     save_state(plant_id)
-
-    conn.commit()
-    conn.close()
 
 if __name__ == "__main__":
     run_scheduler()
