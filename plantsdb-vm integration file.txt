@@ -1,9 +1,0 @@
-scp C:\Users\fatih\PycharmProjects\dinoai\plants.db fatih@130.211.202.49:/home/fatih/database/
-
-ssh-keygen -t rsa -b 2048 -C "fatih@dinoai.org"
-
-type C:\users\fatih\.ssh\id_rsa.pub
-
-ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCYlI5vJvUu7/ICqU2yAgeUKmY8lzElFQT3frvMTLiTKaTtxynBhWOWJa2yNjZhGTbM0Oa3dFQU9Ts+n5LGOTMEO7Xk2mkVCk3kULxDvVKiJ3Zxzym8WhnF1TwU50CXKtWlLiuJpj2ftiPsMS+JB3PjQFncR72y7/7STLvKn7JgbRL6cBshRvUHgY65jR0lv9NU0/q2ZHQN8saSGpQLaWE9eSTvUE8r1G+8PfAfQ//jl0jAYItTL1FaV1REYlm6ycoDrkbMej8rcOCJcJt3v3n9EN0EuCHdEKku3eGYzo6r5GMVNRycX+ezH2+tH3VYE9yyf4/PSXdUNP7BG5L1ItIZ fatih@dinoai.org
-
-mkdir -p /home/fatih/database
