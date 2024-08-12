@@ -1,4 +1,4 @@
-from db_write import connect_to_db, process_plant_id
+from db_write_species import connect_to_db, process_plant_id
 from datetime import datetime, timedelta
 
 def get_max_species_id(c):

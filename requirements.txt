@@ -1,2 +1,5 @@
 requests
 pyodbc
+googleapiclient.http
+google.oauth2
+googleapiclient.discovery
